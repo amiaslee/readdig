@@ -17,18 +17,26 @@ import fetch from '../utils/fetch';
 const Search = () => {
 	const { t } = useTranslation();
 	const [query, setQuery] = useState('');
-	const [filterType, setFilterType] = useState('all');
+	const [scope, setScope] = useState('all'); // Renamed from filterType to scope
 	const [results, setResults] = useState({ feeds: [], articles: [] });
 	const [loading, setLoading] = useState(false);
 	const [searched, setSearched] = useState(false);
 
 	const location = useLocation();
+	const params = new URLSearchParams(location.search);
+	const type = params.get('type'); // Content Category (RSS, Podcast, YouTube)
 
 	useEffect(() => {
 		const params = new URLSearchParams(location.search);
 		const q = params.get('q');
+		const urlScope = params.get('scope'); // Search Scope
+		
 		if (q) {
 			setQuery(q);
+		}
+		// If scope is present in URL, use it
+		if (urlScope) {
+			setScope(urlScope);
 		}
 	}, [location.search]);
 
@@ -43,15 +51,17 @@ const Search = () => {
 			setLoading(true);
 			try {
 				let res;
-				if (filterType === 'all') {
-					res = await search(query);
-					setResults(res.data);
-				} else if (filterType === 'feed') {
-					res = await search(query);
-					setResults({ feeds: res.data.feeds, articles: [] });
+				// Logic:
+				// scope = 'all' | 'feed' -> call /search with q, scope, type
+				// scope = 'stars' | 'recent-read' | 'recent-played' -> call /articles with type=scope, feedType=type
+				
+				if (scope === 'all' || scope === 'feed') {
+					res = await search(query, scope, type);
+					setResults(scope === 'feed' ? { feeds: res.data.feeds, articles: [] } : res.data);
 				} else {
 					// stars, recent-read, recent-played
-					res = await fetch('GET', '/articles', null, { q: query, type: filterType });
+					// API expects 'type' for the list type (stars, etc) and 'feedType' for category (rss, etc)
+					res = await fetch('GET', '/articles', null, { q: query, type: scope, feedType: type });
 					setResults({ feeds: [], articles: res.data });
 				}
 				setSearched(true);
@@ -67,9 +77,9 @@ const Search = () => {
 		}, 500);
 
 		return () => clearTimeout(timer);
-	}, [query, filterType]);
+	}, [query, scope, type]); // Add type to dependencies
 
-	const filterOptions = [
+	const scopeOptions = [
 		{ value: 'all', label: t('All') },
 		{ value: 'feed', label: t('Feeds') },
 		{ value: 'stars', label: t('Stars') },
@@ -93,11 +103,11 @@ const Search = () => {
 						<Select
 							className="select-container"
 							classNamePrefix="select"
-							placeholder={t('Type')}
+							placeholder={t('Scope')}
 							isClearable={false}
-							options={filterOptions}
-							value={filterOptions.find((o) => o.value === filterType)}
-							onChange={(val) => setFilterType(val ? val.value : 'all')}
+							options={scopeOptions}
+							value={scopeOptions.find((o) => o.value === scope)}
+							onChange={(val) => setScope(val ? val.value : 'all')}
 						/>
 					</div>
 			</div>
