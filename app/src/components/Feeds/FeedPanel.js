@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import { sort } from 'fast-sort';
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
@@ -54,8 +54,6 @@ const FeedPanel = () => {
 	const [folderPopover, setFolderPopover] = useState({});
 	const { feedId, folderId } = useParams();
 
-	const { user } = useSelector(state => state);
-	const unreadOnly = (user.settings || {}).unreadOnly || false;
 
 	// Helper function to build links with type parameter
 	const buildLink = (path) => {
