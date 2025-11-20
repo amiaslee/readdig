@@ -66,6 +66,8 @@ const AppRoute = () => {
 					view={true}
 					path="/recent-played/article/:articleId"
 				/>
+				<AuthedRoute component={Dashboard} exact path="/youtube" />
+				<AuthedRoute component={Dashboard} view={true} path="/youtube/article/:articleId" />
 				<AuthedRoute component={Dashboard} exact path="/feed/:feedId" />
 				<AuthedRoute
 					component={Dashboard}

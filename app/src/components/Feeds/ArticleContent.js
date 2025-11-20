@@ -56,7 +56,7 @@ const ArticleContent = ({ article = {} }) => {
 					)}
 				</div>
 			</div>
-			{article.feed.type === 'rss' &&
+			{(article.feed.type === 'rss' || article.feed.type === 'youtube') &&
 				article.attachments &&
 				article.attachments.length > 0 && (
 					<div className="attachments">

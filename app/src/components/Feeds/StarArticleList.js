@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { sort } from 'fast-sort';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { isMobile } from 'react-device-detect';
 import { useTranslation } from 'react-i18next';
@@ -27,9 +27,14 @@ const StarArticleList = () => {
 		(state) => state.reachedEndOfArticles || false,
 	);
 	const { articleId } = useParams();
+	const location = useLocation();
 	const [hasMore, setHasMore] = useState(true);
 	const [tagId, setTagId] = useState();
 	const [topHidden, setTopHidden] = useState(true);
+
+	// Get filter type from URL parameter
+	const searchParams = new URLSearchParams(location.search);
+	const filterType = searchParams.get('type');
 
 	const perPage = 30;
 	const articleType = 'stars';
@@ -44,6 +49,7 @@ const StarArticleList = () => {
 				const params = {
 					type: articleType,
 					tagId,
+					feedType: filterType, // Add feed type filter
 					per_page: perPage,
 					...nextParams,
 				};
@@ -53,7 +59,7 @@ const StarArticleList = () => {
 				setHasMore(false);
 			}
 		},
-		[dispatch, tagId],
+		[dispatch, tagId, filterType],
 	);
 
 	const clearFeedArticles = useCallback(() => {

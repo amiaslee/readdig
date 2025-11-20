@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { sort } from 'fast-sort';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { isMobile } from 'react-device-detect';
 import { useTranslation } from 'react-i18next';
 import InfiniteScroll from 'react-infinite-scroll-component';
@@ -39,6 +39,13 @@ const ArticleList = () => {
 		feedId ? '/feed/' + feedId : ''
 	}`;
 
+	const location = useLocation();
+	// Get filter type from URL parameter
+	const searchParams = new URLSearchParams(location.search);
+	const filterType = searchParams.get('type');
+	// Don't pass 'all' to API, treat it as no filter
+	const apiFilterType = filterType === 'all' ? undefined : filterType;
+
 	const getFeedArticles = useCallback(
 		async (nextParams) => {
 			try {
@@ -50,6 +57,7 @@ const ArticleList = () => {
 					folderId,
 					unreadOnly,
 					per_page: perPage,
+					type: apiFilterType,
 					...nextParams,
 				};
 				source.current = axios.CancelToken.source();
@@ -58,7 +66,7 @@ const ArticleList = () => {
 				setHasMore(false);
 			}
 		},
-		[dispatch, feedId, folderId, unreadOnly],
+		[dispatch, feedId, folderId, unreadOnly, apiFilterType],
 	);
 
 	const clearFeedArticles = useCallback(() => {

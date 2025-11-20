@@ -79,6 +79,9 @@ const opmlFeed = async (item) => {
 	feed.url = url || '';
 	feed.feedUrl = feedUrl;
 	feed.type = ParseFeedType(item.type);
+	if (!feed.type && feed.feedUrl.startsWith('https://www.youtube.com/feeds')) {
+		feed.type = 'youtube';
+	}
 	feed.fingerprint = computeHash(feed.feedUrl);
 	return feed;
 };

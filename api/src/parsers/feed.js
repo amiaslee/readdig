@@ -43,8 +43,6 @@ export const ParseFeed = async (feedUrl, limit = 1000) => {
 		feedResponse = ParseJSONPosts(posts, limit);
 	}
 
-	logger.info(`Finished to parse feed ${feedUrl}`);
-
 	return feedResponse;
 };
 
@@ -291,6 +289,12 @@ export function ParseFeedPosts(posts, limit = 1000) {
 		// fix feed content
 		feedContent = FeedContentMakeUp(posts, feedContent);
 		feedContent = CreateFingerPrints(feedContent);
+		
+		// Set YouTube type after FeedContentMakeUp to enable categorization
+		// Article type will be 'article' (not 'video') to maintain frontend compatibility
+		if (posts.feedUrl && posts.feedUrl.startsWith('https://www.youtube.com/feeds')) {
+			feedContent.type = 'youtube';
+		}
 	}
 	return feedContent;
 }
@@ -389,6 +393,12 @@ export function ParseJSONPosts(posts, limit = 1000) {
 		// fix feed content
 		feedContent = FeedContentMakeUp(posts, feedContent);
 		feedContent = CreateFingerPrints(feedContent);
+		
+		// Set YouTube type after FeedContentMakeUp to enable categorization
+		// Article type will be 'article' (not 'video') to maintain frontend compatibility
+		if (posts.feedUrl && posts.feedUrl.startsWith('https://www.youtube.com/feeds')) {
+			feedContent.type = 'youtube';
+		}
 	}
 	return feedContent;
 }

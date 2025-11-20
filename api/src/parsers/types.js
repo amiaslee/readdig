@@ -9,6 +9,9 @@ export function ParseFeedType(feedType) {
 	if (feedType.toLowerCase().trim() === 'podcast') {
 		publicationType = 'podcast';
 	}
+	if (feedType.toLowerCase().trim() === 'youtube') {
+		publicationType = 'youtube';
+	}
 	return publicationType;
 }
 
@@ -22,6 +25,9 @@ export function ParseArticleType(feedType) {
 	}
 	if (feedType.toLowerCase().trim() === 'podcast') {
 		articleType = 'episode';
+	}
+	if (feedType.toLowerCase().trim() === 'youtube') {
+		articleType = 'article'; // YouTube uses 'article' type with YouTube info in attachments
 	}
 	return articleType;
 }

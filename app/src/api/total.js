@@ -1,7 +1,8 @@
 import fetch from '../utils/fetch';
 
-export const getTotals = async (dispatch) => {
-	const res = await fetch('GET', '/totals');
+export const getTotals = async (dispatch, feedType) => {
+	const params = feedType && feedType !== 'all' ? { type: feedType } : {};
+	const res = await fetch('GET', '/totals', null, params);
 	dispatch({
 		totals: res.data,
 		type: 'BATCH_UPDATE_TOTALS',

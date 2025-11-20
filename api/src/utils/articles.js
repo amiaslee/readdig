@@ -120,12 +120,86 @@ export const getUserArticles = async (
 
 export const getPrimaryArticles = async (
 	userId,
+	feedType,
 	unread,
 	limit = 30,
 	endOfArticleIds,
 	endOfCreatedAt,
 ) => {
 	let whereConditions = [eq(follows.userId, userId), eq(follows.primary, true)];
+
+	// Filter by feed type if specified
+	if (feedType) {
+		whereConditions.push(eq(feeds.type, feedType));
+	}
+
+	if (endOfArticleIds && endOfCreatedAt && moment(parseInt(endOfCreatedAt)).isValid()) {
+		const endIds = endOfArticleIds.split(',').filter((a) => a);
+		whereConditions.push(
+			and(
+				sql`${articles.id} NOT IN ${endIds}`,
+				sql`${articles.createdAt} <= ${moment(parseInt(endOfCreatedAt)).toISOString()}`,
+			),
+		);
+	}
+
+	if (unread) {
+		whereConditions.push(
+			sql`NOT EXISTS (
+				SELECT 1 FROM ${reads}
+				WHERE ${reads.userId} = ${userId}
+				AND ${reads.articleId} = ${articles.id}
+			)`,
+		);
+	}
+
+	const articlesData = await db
+		.select({
+			id: articles.id,
+			url: articles.url,
+			title: articles.title,
+			description: articles.description,
+			author: articles.author,
+			attachments: articles.attachments,
+			type: articles.type,
+			likes: articles.likes,
+			views: articles.views,
+			createdAt: articles.createdAt,
+			updatedAt: articles.updatedAt,
+			feed: {
+				id: feeds.id,
+				title: feeds.title,
+				type: feeds.type,
+				feedUrl: feeds.feedUrl,
+			},
+			stared: sql`CASE WHEN stars.id IS NOT NULL THEN true ELSE false END`,
+			played: sql`CASE WHEN listens.id IS NOT NULL THEN true ELSE false END`,
+			unread: unread ? sql`true` : unreadFilter(userId, articles.id),
+			orderedAt: sql`CAST(EXTRACT(epoch FROM ${articles.createdAt}) * 1000 AS BIGINT)`,
+		})
+		.from(articles)
+		.innerJoin(follows, eq(articles.feedId, follows.feedId))
+		.leftJoin(feeds, eq(articles.feedId, feeds.id))
+		.leftJoin(stars, and(eq(stars.articleId, articles.id), eq(stars.userId, userId)))
+		.leftJoin(
+			listens,
+			and(eq(listens.articleId, articles.id), eq(listens.userId, userId)),
+		)
+		.where(and(...whereConditions))
+		.orderBy(desc(articles.createdAt))
+		.limit(limit);
+
+	return filterArticles(articlesData);
+};
+
+export const getYouTubeArticles = async (
+	userId,
+	unread,
+	limit = 30,
+	endOfArticleIds,
+	endOfCreatedAt,
+) => {
+	let whereConditions = [eq(follows.userId, userId), eq(feeds.type, 'youtube')];
 
 	if (endOfArticleIds && endOfCreatedAt && moment(parseInt(endOfCreatedAt)).isValid()) {
 		const endIds = endOfArticleIds.split(',').filter((a) => a);
@@ -189,6 +263,7 @@ export const getPrimaryArticles = async (
 export const getStarArticles = async (
 	userId,
 	tagId,
+	feedType,
 	limit = 30,
 	endOfArticleIds,
 	endOfCreatedAt,
@@ -207,6 +282,11 @@ export const getStarArticles = async (
 		starWhereConditions.push(sql`jsonb_array_length(${stars.tagIds}) = 0`);
 	} else if (tagId) {
 		starWhereConditions.push(sql`${stars.tagIds} ? ${tagId}`);
+	}
+
+	// Filter by feed type if specified
+	if (feedType) {
+		starWhereConditions.push(eq(feeds.type, feedType));
 	}
 
 	if (endOfArticleIds && endOfCreatedAt && moment(parseInt(endOfCreatedAt)).isValid()) {
@@ -245,7 +325,7 @@ export const getStarArticles = async (
 		})
 		.from(stars)
 		.leftJoin(articles, eq(stars.articleId, articles.id))
-		.leftJoin(feeds, eq(articles.feedId, feeds.id))
+		.innerJoin(feeds, eq(articles.feedId, feeds.id))
 		.leftJoin(
 			listens,
 			and(eq(listens.articleId, articles.id), eq(listens.userId, userId)),
@@ -259,6 +339,7 @@ export const getStarArticles = async (
 
 export const getReadArticles = async (
 	userId,
+	feedType,
 	limit = 30,
 	endOfArticleIds,
 	endOfCreatedAt,
@@ -266,11 +347,17 @@ export const getReadArticles = async (
 ) => {
 	let readWhereConditions = [eq(reads.userId, userId), eq(reads.view, true)];
 
+	// Filter by search query if specified
 	if (queryText) {
 		const searchPattern = `%${queryText}%`;
 		readWhereConditions.push(
 			or(ilike(articles.title, searchPattern), ilike(articles.content, searchPattern)),
 		);
+	}
+
+	// Filter by feed type if specified
+	if (feedType) {
+		readWhereConditions.push(eq(feeds.type, feedType));
 	}
 
 	if (endOfArticleIds && endOfCreatedAt && moment(parseInt(endOfCreatedAt)).isValid()) {
@@ -309,7 +396,7 @@ export const getReadArticles = async (
 		})
 		.from(reads)
 		.leftJoin(articles, eq(reads.articleId, articles.id))
-		.leftJoin(feeds, eq(articles.feedId, feeds.id))
+		.innerJoin(feeds, eq(articles.feedId, feeds.id))
 		.leftJoin(stars, and(eq(stars.articleId, articles.id), eq(stars.userId, userId)))
 		.leftJoin(
 			listens,
@@ -324,6 +411,7 @@ export const getReadArticles = async (
 
 export const getPlayedArtilces = async (
 	userId,
+	feedType,
 	limit = 30,
 	endOfArticleIds,
 	endOfCreatedAt,
@@ -331,11 +419,17 @@ export const getPlayedArtilces = async (
 ) => {
 	let listenWhereConditions = [eq(listens.userId, userId)];
 
+	// Filter by search query if specified
 	if (queryText) {
 		const searchPattern = `%${queryText}%`;
 		listenWhereConditions.push(
 			or(ilike(articles.title, searchPattern), ilike(articles.content, searchPattern)),
 		);
+	}
+
+	// Filter by feed type if specified
+	if (feedType) {
+		listenWhereConditions.push(eq(feeds.type, feedType));
 	}
 
 	if (endOfArticleIds && endOfCreatedAt && moment(parseInt(endOfCreatedAt)).isValid()) {
@@ -374,7 +468,7 @@ export const getPlayedArtilces = async (
 		})
 		.from(listens)
 		.leftJoin(articles, eq(listens.articleId, articles.id))
-		.leftJoin(feeds, eq(articles.feedId, feeds.id))
+		.innerJoin(feeds, eq(articles.feedId, feeds.id))
 		.leftJoin(stars, and(eq(stars.articleId, articles.id), eq(stars.userId, userId)))
 		.where(and(...listenWhereConditions))
 		.orderBy(desc(listens.createdAt))

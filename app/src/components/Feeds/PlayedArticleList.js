@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { sort } from 'fast-sort';
 import { useDispatch, useSelector } from 'react-redux';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { isMobile } from 'react-device-detect';
 import { useTranslation } from 'react-i18next';
@@ -26,8 +26,13 @@ const PlayedArticleList = () => {
 		(state) => state.reachedEndOfArticles || false,
 	);
 	const { articleId } = useParams();
+	const location = useLocation();
 	const [hasMore, setHasMore] = useState(true);
 	const [topHidden, setTopHidden] = useState(true);
+
+	// Get filter type from URL parameter
+	const searchParams = new URLSearchParams(location.search);
+	const filterType = searchParams.get('type');
 
 	const perPage = 30;
 	const articleType = 'recent-played';
@@ -41,6 +46,7 @@ const PlayedArticleList = () => {
 				}
 				const params = {
 					type: articleType,
+					feedType: filterType,
 					per_page: perPage,
 					...nextParams,
 				};
@@ -50,7 +56,7 @@ const PlayedArticleList = () => {
 				setHasMore(false);
 			}
 		},
-		[dispatch],
+		[dispatch, filterType],
 	);
 
 	const clearFeedArticles = useCallback(() => {

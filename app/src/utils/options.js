@@ -12,6 +12,7 @@ export const languageOptions = [
 export const feedTypeOptions = [
 	{ value: 'rss', label: 'RSS' },
 	{ value: 'podcast', label: 'Podcast' },
+	{ value: 'youtube', label: 'YouTube' },
 ];
 
 export const feedStatusOptions = [

@@ -51,6 +51,8 @@ const Dashboard = () => {
 					<Route component={ArticlePanel} path="/feed/:feedId" />
 					<Route component={ArticlePanel} path="/recent-played/article/:articleId" />
 					<Route component={ArticlePanel} path="/recent-played" />
+					<Route component={ArticlePanel} path="/youtube/article/:articleId" />
+					<Route component={ArticlePanel} path="/youtube" />
 					<Route component={ArticlePanel} path="/recent-read/article/:articleId" />
 					<Route component={ArticlePanel} path="/recent-read" />
 					<Route component={ArticlePanel} path="/stars/article/:articleId" />

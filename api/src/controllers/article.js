@@ -11,6 +11,7 @@ import {
 	getPlayedArtilces,
 	getArticleById,
 	getParsedArticle,
+	getYouTubeArticles,
 } from '../utils/articles';
 
 exports.list = async (req, res) => {
@@ -21,6 +22,7 @@ exports.list = async (req, res) => {
 	const feedId = query.feedId;
 	const tagId = query.tagId;
 	const queryType = query.type;
+	const feedType = query.feedType; // Add feedType parameter
 	const unreadOnly = query.unreadOnly;
 	const endOfArticleIds = query.endOfArticleIds;
 	const endOfCreatedAt = query.endOfCreatedAt;
@@ -34,6 +36,7 @@ exports.list = async (req, res) => {
 		const starArticles = await getStarArticles(
 			userId,
 			tagId,
+			feedType, // Pass feedType
 			limit,
 			endOfArticleIds,
 			endOfCreatedAt,
@@ -45,6 +48,7 @@ exports.list = async (req, res) => {
 	if (queryType === 'recent-read') {
 		const readArticles = await getReadArticles(
 			userId,
+			feedType, // Pass feedType
 			limit,
 			endOfArticleIds,
 			endOfCreatedAt,
@@ -56,6 +60,7 @@ exports.list = async (req, res) => {
 	if (queryType === 'recent-played') {
 		const playedArticles = await getPlayedArtilces(
 			userId,
+			feedType, // Pass feedType
 			limit,
 			endOfArticleIds,
 			endOfCreatedAt,
@@ -64,9 +69,22 @@ exports.list = async (req, res) => {
 		return res.json(playedArticles);
 	}
 
-	if (!queryType && !folderId && !feedId) {
+	if (queryType === 'youtube') {
+		const youtubeArticles = await getYouTubeArticles(
+			userId,
+			unreadOnly,
+			limit,
+			endOfArticleIds,
+			endOfCreatedAt,
+		);
+		return res.json(youtubeArticles);
+	}
+
+	// Handle primary articles with optional type filtering (rss, podcast, or no filter)
+	if (!folderId && !feedId && (!queryType || queryType === 'rss' || queryType === 'podcast')) {
 		const primaryArticles = await getPrimaryArticles(
 			userId,
+			queryType, // pass type for filtering
 			unreadOnly,
 			limit,
 			endOfArticleIds,

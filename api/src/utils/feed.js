@@ -9,7 +9,7 @@ import { ParseArticleType } from '../parsers/types';
 import { ParseFeed } from '../parsers/feed';
 
 export function isFeedType(feedType) {
-	return feedType ? ['rss', 'podcast'].includes(feedType.toLowerCase().trim()) : false;
+	return feedType ? ['rss', 'podcast', 'youtube'].includes(feedType.toLowerCase().trim()) : false;
 }
 
 export const isFeedId = async (feedIds) => {

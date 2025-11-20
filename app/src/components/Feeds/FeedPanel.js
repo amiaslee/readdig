@@ -20,12 +20,32 @@ const FeedPanel = () => {
 	const dispatch = useDispatch();
 	const feedsRef = useRef();
 	const { t } = useTranslation();
-	const follows = useSelector((state) =>
+	const location = useLocation();
+	
+	// Get current category from URL
+	const searchParams = new URLSearchParams(location.search);
+	const currentType = searchParams.get('type');
+	
+	const allFollows = useSelector((state) =>
 		sort(Object.values(state.follows || {})).asc('title'),
 	);
-	const folders = useSelector((state) =>
+	const allFolders = useSelector((state) =>
 		sort(Object.values(state.folders || {})).asc('name'),
 	);
+	
+	// Filter follows and folders by type if specified
+	const follows = currentType
+		? allFollows.filter(follow => follow.type === currentType)
+		: allFollows;
+	
+	const folders = currentType
+		? allFolders.filter(folder => {
+				// A folder is included if it has at least one feed of the current type
+				const folderFeeds = allFollows.filter(f => f.folderId === folder.id);
+				return folderFeeds.some(feed => feed.type === currentType);
+		  })
+		: allFolders;
+	
 	const folderIsOpen = useSelector((state) => state.folderIsOpen || {});
 	const [loading, setLoading] = useState(true);
 	const [feed, setFeed] = useState();
@@ -33,6 +53,17 @@ const FeedPanel = () => {
 	const [feedPopover, setFeedPopover] = useState({});
 	const [folderPopover, setFolderPopover] = useState({});
 	const { feedId, folderId } = useParams();
+
+	const { user } = useSelector(state => state);
+	const unreadOnly = (user.settings || {}).unreadOnly || false;
+
+	// Helper function to build links with type parameter
+	const buildLink = (path) => {
+		if (!currentType || currentType === 'all') {
+			return path;
+		}
+		return `${path}?type=${currentType}`;
+	};
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -122,7 +153,7 @@ const FeedPanel = () => {
 									className={classNames({
 										active: folderId === folder.id && !feedId,
 									})}
-									to={`/folder/${folder.id}`}
+									to={buildLink(`/folder/${folder.id}`)}
 									title={folder.name}
 								>
 									<Holdable
@@ -159,7 +190,7 @@ const FeedPanel = () => {
 											})}
 										>
 											<Link
-												to={`/folder/${folder.id}/feed/${feed.id}`}
+												to={buildLink(`/folder/${folder.id}/feed/${feed.id}`)}
 												title={feed.title}
 											>
 												<div className="icon">
@@ -194,7 +225,7 @@ const FeedPanel = () => {
 									active: feedId === feed.id,
 								})}
 							>
-								<Link to={`/feed/${feed.id}`} title={feed.title}>
+								<Link to={buildLink(`/feed/${feed.id}`)} title={feed.title}>
 									<div className="icon">
 										<Image
 											relative={true}

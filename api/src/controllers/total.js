@@ -7,37 +7,80 @@ import { logger } from '../utils/logger';
 
 exports.get = async (req, res) => {
 	const userId = req.user.sub;
+	const feedType = req.query.type; // Get feed type filter
+
+	// Build where conditions for feed type filtering
+	const buildFeedTypeCondition = () => {
+		if (!feedType || feedType === 'all') {
+			return null;
+		}
+		return eq(feeds.type, feedType);
+	};
+
+	const feedTypeCondition = buildFeedTypeCondition();
 
 	const [primaryResult, starResult, recentReadResult, recentPlayedResult, feedResult] =
 		await Promise.all([
-			// Primary articles count - optimized with JOIN
-			db
-				.select({ count: count(articles.id) })
-				.from(articles)
-				.innerJoin(follows, eq(articles.feedId, follows.feedId))
-				.where(and(eq(follows.userId, userId), eq(follows.primary, true)))
-				.then((result) => result[0]?.count || 0),
+			// Primary articles count - with optional feed type filter
+			feedTypeCondition
+				? db
+						.select({ count: count(articles.id) })
+						.from(articles)
+						.innerJoin(follows, eq(articles.feedId, follows.feedId))
+						.innerJoin(feeds, eq(articles.feedId, feeds.id))
+						.where(and(eq(follows.userId, userId), eq(follows.primary, true), feedTypeCondition))
+						.then((result) => result[0]?.count || 0)
+				: db
+						.select({ count: count(articles.id) })
+						.from(articles)
+						.innerJoin(follows, eq(articles.feedId, follows.feedId))
+						.where(and(eq(follows.userId, userId), eq(follows.primary, true)))
+						.then((result) => result[0]?.count || 0),
 
-			// Star count
-			db
-				.select({ count: count(stars.id) })
-				.from(stars)
-				.where(eq(stars.userId, userId))
-				.then((result) => result[0]?.count || 0),
+			// Star count - with optional feed type filter
+			feedTypeCondition
+				? db
+						.select({ count: count(stars.id) })
+						.from(stars)
+						.innerJoin(articles, eq(stars.articleId, articles.id))
+						.innerJoin(feeds, eq(articles.feedId, feeds.id))
+						.where(and(eq(stars.userId, userId), feedTypeCondition))
+						.then((result) => result[0]?.count || 0)
+				: db
+						.select({ count: count(stars.id) })
+						.from(stars)
+						.where(eq(stars.userId, userId))
+						.then((result) => result[0]?.count || 0),
 
-			// Recent read count
-			db
-				.select({ count: count(reads.id) })
-				.from(reads)
-				.where(and(eq(reads.userId, userId), eq(reads.view, true)))
-				.then((result) => result[0]?.count || 0),
+			// Recent read count - with optional feed type filter
+			feedTypeCondition
+				? db
+						.select({ count: count(reads.id) })
+						.from(reads)
+						.innerJoin(articles, eq(reads.articleId, articles.id))
+						.innerJoin(feeds, eq(articles.feedId, feeds.id))
+						.where(and(eq(reads.userId, userId), eq(reads.view, true), feedTypeCondition))
+						.then((result) => result[0]?.count || 0)
+				: db
+						.select({ count: count(reads.id) })
+						.from(reads)
+						.where(and(eq(reads.userId, userId), eq(reads.view, true)))
+						.then((result) => result[0]?.count || 0),
 
-			// Recent played count
-			db
-				.select({ count: count(listens.id) })
-				.from(listens)
-				.where(eq(listens.userId, userId))
-				.then((result) => result[0]?.count || 0),
+			// Recent played count - with optional feed type filter
+			feedTypeCondition
+				? db
+						.select({ count: count(listens.id) })
+						.from(listens)
+						.innerJoin(articles, eq(listens.articleId, articles.id))
+						.innerJoin(feeds, eq(articles.feedId, feeds.id))
+						.where(and(eq(listens.userId, userId), feedTypeCondition))
+						.then((result) => result[0]?.count || 0)
+				: db
+						.select({ count: count(listens.id) })
+						.from(listens)
+						.where(eq(listens.userId, userId))
+						.then((result) => result[0]?.count || 0),
 
 			// Total feed count
 			db
@@ -52,6 +95,7 @@ exports.get = async (req, res) => {
 		star: parseInt(starResult),
 		recentRead: parseInt(recentReadResult),
 		recentPlayed: parseInt(recentPlayedResult),
+		history: parseInt(recentReadResult) + parseInt(recentPlayedResult),
 		feed: parseInt(feedResult),
 	});
 };

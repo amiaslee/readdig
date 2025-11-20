@@ -4,19 +4,22 @@ import { useTranslation } from 'react-i18next';
 
 import { feedTypeOptions } from '../../utils/options';
 
-const FeedTypeSelect = ({ value, placeholder, onChange }) => {
+const FeedTypeSelect = ({ value, placeholder, onChange, options }) => {
 	const { t } = useTranslation();
-	const options = feedTypeOptions.map(({ value, label }) => ({ value, label: t(label) }));
+	// Use custom options if provided, otherwise use default feedTypeOptions
+	const selectOptions = options 
+		? options.map(({ value, label }) => ({ value, label: t(label) }))
+		: feedTypeOptions.map(({ value, label }) => ({ value, label: t(label) }));
 
 	return (
 		<Select
 			className="select-container"
 			classNamePrefix="select"
 			placeholder={placeholder || t('Select...')}
-			isClearable={true}
-			options={options}
-			onChange={(val) => onChange(val ? val.value : null)}
-			value={options.find((o) => o.value === value)}
+			isClearable={false}
+			options={selectOptions}
+			onChange={(val) => onChange(val ? val.value : 'all')}
+			value={selectOptions.find((o) => o.value === value) || selectOptions[0]}
 		/>
 	);
 };
